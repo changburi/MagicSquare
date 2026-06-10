@@ -1,85 +1,92 @@
 ---
 name: magic-square-docs
 description: >-
-  MagicSquare 세션 보고서·Transcript·ARRR 체크리스트를 report/prompt 번호 규칙에
-  맞게 작성. export-session, save-report, ARRR 실습 마감, TDD 세션 정리, Mom
-  Test 문서화 시 사용.
+  MagicSquare Report Export, Transcript, /export-session, Phase repeat, ARRR
+  1사이클 완료 보고, 세션 N 보고서. Report/NN.REPORT.md, Prompting/NN.Export-Transcript.md
+  형식. export-session·save-report 연동.
+disable-model-invocation: true
 ---
 
-# MagicSquare Docs
+# MagicSquare Docs Skill
 
-## SSOT
+Export·세션 보고 요청 시 로드. **Export 요청 시 magic-square-docs Skill 로드 후 checklist 수행.**
 
-| 문서 | 용도 |
+## SSOT 형식
+
+| 종류 | 경로 |
 |------|------|
-| `.cursorrules` | API·TDD·Boundary |
-| `docs/PRD.md` | 요구사항 (있을 때) |
-| `.cursor/commands/export.md` | export-session (`NN.REPORT` + `NN.Export-Transcript`) |
-| `.cursor/commands/save-report.md` | `NN.<slug>.md` + `NN.<slug>-transcript.md` |
+| export-session | `report/NN.REPORT.md` + `prompt/NN.Export-Transcript.md` |
+| save-report | `report/NN.<slug>.md` + `prompt/NN.<slug>-transcript.md` |
 
-## 번호 규칙
+폴더: `Report/` → `report/`, `Prompting/` → `prompt/`
 
-1. `report/`, `prompt/`에서 `^\d{2}\.` 파일 스캔
-2. **max(NN) + 1** (없으면 `01`)
-3. 같은 세션은 **동일 NN** — 보고서 1 + Transcript 1 (+ 체크리스트는 세션 메모)
+## 워크플로
 
-### export-session (`/export-session` = `export.md`)
+### Step A — 입력 수집
 
-| 출력 | 경로 |
+| 항목 | 출처 |
 |------|------|
-| 보고서 | `report/NN.REPORT.md` |
-| Transcript | `prompt/NN.Export-Transcript.md` |
+| `git status` | 실제 실행 (commit 임의 금지) |
+| `pytest` 결과 | **실제 실행** — 채팅에 없는 결과 기재 금지 |
+| Phase | red / green / refactor / repeat |
+| Test ID | T1~T6, D-LOC-01 등 |
+| Command | /red-test-plan, /export 등 |
 
-### save-report (`/save-report`)
+### Step B — 번호 결정
 
-| 출력 | 경로 |
-|------|------|
-| 보고서 | `report/NN.<slug>.md` |
-| Transcript | `prompt/NN.<slug>-transcript.md` |
+`NN = max(report/^\d{2}\./, prompt/^\d{2}\./) + 1` (없으면 `01`)
 
-## 템플릿 (복사·채움)
+### Step C — Report
 
-- [report-template.md](templates/report-template.md) — `MagicSquare_1004` 메타·3섹션
-- [transcript-template.md](templates/transcript-template.md) — User/Cursor 턴·파일 표
-- [checklist-template.md](templates/checklist-template.md) — ARRR·S1~S3·T1~T6·금지
+템플릿: [report-template.md](report-template.md)
 
-ARRR 실습 마감 시 checklist를 `report/NN.arr-checklist.md` 등으로 저장해도 됨 (사용자 요청 시).
+- 제목: `# MagicSquare_1004 — {주제}`
+- Phase별 STEP: RED / GREEN / REFACTOR / repeat
+- 메타 표 · 3섹션 (요약 / 핵심 / 다음)
+
+### Step D — Transcript
+
+템플릿: [transcript-template.md](transcript-template.md)
+
+- User / Cursor 턴
+- `_Exported on {날짜} from Cursor_`
+- `_Source uuid: {선택}` (agent transcript 있을 때)
+
+### Step E — README 갱신
+
+`report/README.md`·`prompt/README.md` 문서 표에 NN 행 추가 (**사용자 요청 또는 export 명시 시만**).
+
+### Step F — 완료 보고
+
+경로 2개 + 순번 + 주제 한 줄.
+
+체크리스트: [phase-checklist.md](phase-checklist.md)
+
+## /export-session 연동
+
+`.cursor/commands/export.md` 실행 시 본 Skill 절차 Step A→F 수행.  
+파일명은 `NN.REPORT.md` + `NN.Export-Transcript.md` 고정.
 
 ## 작성 규칙
 
 - **한국어**
-- 확정·과거 사실만. 미구현을 완료처럼 쓰지 않음
-- TDD 세션: Phase, `pytest` 결과, 변경 파일 경로
+- 확정·과거 사실만
+- TDD: Phase, pytest 결과, 변경 경로
 - Mom Test: 표면/진짜 문제·증거 3줄 (해당 시)
-- 비밀·토큰 기록 금지
-- `src/`·`tests/` — 문서 스킬만으로 **무단 수정 금지**
-
-## Transcript 톤
-
-- **User:** 원문·제약 유지
-- **Cursor:** 경로·Phase·명령 결과만. 장황한 도구 로그 생략
-- 시뮬레이션은 제목에 `[시뮬레이션]`
-
-## 완료 보고 (export-session 형식)
-
-```
-## Export 완료
-
-| 종류 | 경로 |
-|------|------|
-| 보고서 | report/NN.….md |
-| Transcript | prompt/NN.….md |
-
-**순번:** NN
-**주제:** <한 줄>
-```
+- 비밀·토큰 금지
 
 ## 금지
 
-- 기존 `NN.` 파일 덮어쓰기
-- 보고서·Transcript 쌍 중 하나만 생성
-- Git commit·push (사용자 요청 시만)
+| 금지 | 이유 |
+|------|------|
+| git commit 임의 | `.cursorrules` |
+| `UPDATE_GOLDEN` 임의 | golden 우회 |
+| 채팅에 없는 pytest 결과 | 사실 왜곡 |
+| 기존 `NN.` 덮어쓰기 | 순번 충돌 |
+| `src/`·`tests/` 무단 수정 | 문서 Skill |
 
-## 연계 스킬
+## 연계
 
-- TDD·ARRR: [magic-square-tdd](../magic-square-tdd/SKILL.md)
+- TDD: [magic-square-tdd](../magic-square-tdd/SKILL.md)
+- export: [export.md](../../commands/export.md)
+- save-report: [save-report.md](../../commands/save-report.md)

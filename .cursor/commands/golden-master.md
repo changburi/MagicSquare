@@ -1,9 +1,9 @@
-# golden-master — ARRR Run GREEN (골든 마스터 SSOT)
+# golden-master — ARRR Run GREEN (Approval Test)
 
-`validate_lines` **GREEN 보조** — 완성 4×4 마방진 **골든 마스터**를 테스트 SSOT로 고정한다.  
-`pass` 기준 격자·변형 테스트의 **단일 진실 공급원**을 만든다.
+**GREEN PASS 후** Golden Master(Approval Test)를 구축·검증한다.
 
-> SSOT: `.cursorrules` · `docs/PRD.md`(있으면) · `report/session3-workbook-1004.md`
+> SSOT: `.cursorrules` · `docs/PRD.md` · `tests/`  
+> Skill: **magic-square-tdd** (있으면 자동 따름)
 
 ---
 
@@ -12,50 +12,62 @@
 응답 **첫 줄**:
 
 ```
-Phase: GREEN (golden master)
+Phase: green | Layer: entity | Track: Logic
 ```
 
-이어서 **한 문장**으로 골든 마스터를 어디에 두었는지 쓴다.
+이어서 **한 문장**: 대상 Test ID·golden 파일 경로.
 
 ---
 
-## 자동 절차 (추가 입력·질문 금지)
+## 전제
 
-1. `tests/test_validate_lines.py`에 `GOLDEN_GRID` 상수가 있는지 확인한다.
-2. **없으면** 파일 상단( import 아래)에 아래 상수를 추가한다. **있으면** 값이 SSOT와 일치하는지 검증만 한다.
+- 대상 Test ID의 `pytest`가 **PASS** 상태.
+- PASS 아니면 중단하고 보고:
+
+```
+Golden Master 진행을 위해 GREEN PASS 단계를 완료해 주세요.
+```
+
+---
+
+## 자동 절차 (추가 질문 금지)
+
+1. 대상 테스트·출력 스냅샷 형식을 확인한다.
+2. `tests/_approval.py`에 `assert_matches_golden`이 **없으면 생성**.
+3. `tests/golden/{test_id_lower}.approved.txt` 연결.
+4. 기준 파일 생성: `UPDATE_GOLDEN=1 python -m pytest {target} -v`
+5. 검증: `UPDATE_GOLDEN` **없이** `pytest` → **matched** 확인.
+6. golden 파일 **수동 편집으로 통과 우회 금지**.
+
+### assert_matches_golden (개요)
 
 ```python
-# Golden master — 완성 4×4 마방진 (10선 합 MAGIC_SUM)
-GOLDEN_GRID = [
-    [16,  3,  2, 13],
-    [ 5, 10, 11,  8],
-    [ 9,  6,  7, 12],
-    [ 4, 15, 14,  1],
-]
+# tests/_approval.py
+import os
+from pathlib import Path
+
+GOLDEN_DIR = Path(__file__).parent / "golden"
+
+def assert_matches_golden(actual: str, golden_name: str) -> None:
+    path = GOLDEN_DIR / golden_name
+    if os.environ.get("UPDATE_GOLDEN") == "1":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(actual, encoding="utf-8")
+        return
+    expected = path.read_text(encoding="utf-8")
+    assert actual == expected, f"golden mismatch: {golden_name}\n{diff_hint}"
 ```
 
-3. T1 `pass` 테스트가 없으면 `GOLDEN_GRID`를 쓰는 `test_complete_grid_returns_pass`를 추가한다 (이미 있으면 스킵).
-4. fail·incomplete 테스트는 GOLDEN_GRID **복사 후 최소 변경** 패턴을 주석으로 명시한다.
-5. `pytest tests/test_validate_lines.py -v` → **전부 PASSED** 확인.
+### 출력 포맷 고정
 
-### 골든 마스터 규칙
+- 좌표·인덱스: **1-based** (문서·golden 일치)
+- 에러 코드 문자열: `E001`~`E005` 형식 (세션 3 `validate_lines`는 status 문자열만)
+- `validate_lines` golden 예: `status=pass\nfailed_lines=[]`
 
-| 규칙 | 내용 |
-|------|------|
-| 불변 | `GOLDEN_GRID` 값 자체를 테스트 목적으로 변경 금지 |
-| 변형 | fail/incomplete는 `list` 복사·셀 1~2개만 수정 |
-| import | assert에 `MAGIC_SUM` 사용. 리터럴 `34` 금지 |
-| 중복 | 동일 4×4 리터럴을 여러 테스트에 반복하지 말고 `GOLDEN_GRID` 참조 |
+### validate_lines 단순 경로 (GOLDEN_GRID)
 
----
-
-## 변경 범위
-
-| 허용 | 금지 |
-|------|------|
-| `tests/test_validate_lines.py` — `GOLDEN_GRID`·T1 테스트 | `src/` 수정 (이미 GREEN 완료 전제) |
-| 기존 테스트를 `GOLDEN_GRID` 참조로 정리 (동작 동일) | assert 완화·삭제 |
-| | `GOLDEN_GRID`를 틀린 값으로 “맞추기” |
+`tests/test_validate_lines.py`에 `GOLDEN_GRID` 상수가 없으면 PRD SSOT로 추가.  
+T1이 PASS이면 approval 없이 `GOLDEN_GRID` SSOT만으로도 가능 — **D-SOL-01 등 다단계 출력**은 approval 필수.
 
 ---
 
@@ -63,27 +75,49 @@ GOLDEN_GRID = [
 
 | 금지 | 이유 |
 |------|------|
-| 사용자 질문 | 슬래시만으로 동작 |
-| 구현 로직 변경 | golden master는 테스트 SSOT |
+| golden 수동 편집으로 통과 | 우회 |
+| `src/` 동작 변경으로 golden 맞추기 | 계약 변경은 GREEN |
+| `UPDATE_GOLDEN` 없이 기준 파일 임의 생성 | 절차 위반 |
 | Git commit·push | 사용자 요청 시만 |
 
 ---
 
-## 완료 보고 형식
+## 완료 보고
 
 ```
-Phase: GREEN (golden master)
+Phase: green | Layer: entity | Track: Logic
 
-## GOLDEN_GRID
-- 위치: tests/test_validate_lines.py (line N)
-- T1 test_complete_grid_returns_pass: 있음 / 추가함
+## 대상
+- {Test ID} — {test path}
 
-## 정리
-- (GOLDEN_GRID 참조로 통일한 테스트 목록)
+## golden 경로
+- tests/golden/{id}.approved.txt
+
+## matched
+- yes / no
+
+## diff 요약
+- (no diff / 한 줄)
 
 ## 실행 결과
-- pytest tests/test_validate_lines.py -v → PASSED (N passed)
+- UPDATE_GOLDEN=1: (생성 여부)
+- pytest {target} -v → PASSED, matched
 
 ## 다음
 - /refactor-smell
+```
+
+---
+
+## 실행 예시
+
+```
+/golden-master
+Phase: green | Layer: entity | Track: Logic
+대상: T1
+```
+
+```
+/golden-master
+대상: D-SOL-01 (tests/entity/test_d_sol_01.py::test_d_sol_01_step_a_success)
 ```

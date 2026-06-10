@@ -1,9 +1,10 @@
-# red-test-plan — ARRR Arrange (테스트 계획)
+# red-test-plan — ARRR Ask (RED ③ 테스트 설계)
 
-`validate_lines` **ARRR·A 단계** 전용. 실패 테스트를 쓰기 **전** Arrange·Act·Assert 계획만 수립한다.  
+**ARRR·A 단계** — C2C 설계표·테스트 플랜만 작성한다.  
 **코드·파일 변경 없음** — 계획 출력만.
 
-> SSOT: `.cursorrules` · `docs/PRD.md`(있으면) · `report/session3-workbook-1004.md` · `.cursor/commands/export.md`
+> SSOT: `.cursorrules` · `docs/PRD.md` · `report/session3-workbook-1004.md`  
+> Skill: `magic-square-tdd` (있으면 자동 따름)
 
 ---
 
@@ -12,29 +13,82 @@
 응답 **첫 줄**:
 
 ```
-Phase: RED (Arrange — test plan)
+Phase: red | Layer: entity | Track: Logic
 ```
 
-이어서 **한 문장**으로 이번에 계획할 테스트 ID·목표를 쓴다.
+- **Track A (UI):** `Phase: red | Layer: boundary | Track: UI` — 본문 동일, Layer만 `boundary`로 바꾸면 재사용.
+- 채팅·PRD·`tests/` 상태에서 **세션 주제·Test ID·RED 묶음**을 자동 추출한다. **추가 질문 금지.**
 
 ---
 
-## 자동 절차 (추가 입력·질문 금지)
+## 자동 절차
 
-1. SSOT를 읽어 API·10선·Mom Test S1~S3를 확인한다.
-2. `tests/test_validate_lines.py`를 읽어 **이미 있는 테스트**를 파악한다.
-3. 아래 **우선순위 큐**에서 첫 미커버 항목 1개를 고른다 (이미 있으면 스킵).
+1. SSOT·`tests/test_validate_lines.py`(및 `tests/entity/` 등)를 읽는다.
+2. 채팅 컨텍스트 또는 PRD §5 ARRR 큐에서 **이번 RED 묶음**·Test ID를 결정한다.
+3. 미커버 우선순위 (Logic · `validate_lines`):
 
-| 순위 | ID | Mom Test | 검증 행위 | 기대 status | 기대 failed_lines |
-|------|-----|----------|-----------|-------------|-------------------|
-| 1 | T1 | S2 | 완성 4×4 격자 | `pass` | `[]` |
-| 2 | T2 | S3 | (2,2) 교차셀 변경 → R2·C2 동시 fail | `fail` | `R2`, `C2` 포함 |
-| 3 | T3 | S1 | D1만 합 깨짐 | `fail` | `D1` 포함 |
-| 4 | T4 | S1 | D2만 합 깨짐 | `fail` | `D2` 포함 |
-| 5 | T5 | — | 빈칸(0) 1개 이상 | `incomplete` | `[]` |
-| 6 | T6 | S3 | 행만 맞고 열 1개만 틀림 | `fail` | 해당 `C*` 1개 |
+| 순위 | Test ID | PRD FR | Mom Test | Given→Then 요약 | 기대 status |
+|------|---------|--------|----------|-------------------|-------------|
+| 1 | T1 | FR-VAL-01 | S2 | GOLDEN_GRID → pass | `pass` |
+| 2 | T2 | FR-VAL-02 | S3 | (2,2) 교차셀 변경 → R2·C2 fail | `fail` |
+| 3 | T3 | FR-VAL-03 | S1 | D1만 깨짐 | `fail` |
+| 4 | T4 | FR-VAL-04 | S1 | D2만 깨짐 | `fail` |
+| 5 | T5 | FR-VAL-05 | — | 빈칸(0) 존재 | `incomplete` |
+| 6 | T6 | FR-VAL-06 | S3 | 열 1개만 틀림 | `fail` |
 
-4. 골든 마스터 격자(완성 4×4)는 아래 SSOT를 쓴다 — 리터럴 재발명 금지.
+4. 아래 **출력 4블록**을 표 형식으로만 출력한다.
+
+---
+
+## 출력 4블록 (필수)
+
+### 1) C2C (Rule 1~3)
+
+| Rule | 내용 |
+|------|------|
+| **Rule 1** | PRD FR 인용 → 이번 RED 묶음에 대응하는 **To-Do 1개** |
+| **Rule 2** | Test ID · **Given** / **When** / **Then** (한 행) |
+| **Rule 3** | Mom Test S1~S3·ECB 계층과의 연결 (해당 시) |
+
+**C2C 표 예시 (T2):**
+
+| 항목 | 내용 |
+|------|------|
+| FR | PRD FR-VAL-02 — 한 축 교차 실패 시 `failed_lines`에 해당 선 ID |
+| To-Do | `validate_lines`가 R2·C2 동시 fail을 반환함을 RED로 고정 |
+| Test ID | T2 |
+| Given | GOLDEN_GRID, 1-based (2,2) 셀 `10→11` |
+| When | `validate_lines(grid)` |
+| Then | `status=="fail"`, `"R2"`·`"C2"` ∈ `failed_lines` |
+
+### 2) Track B 표 (Logic)
+
+| Test ID | 대상 함수 | Given → Then | Invariant | Expected RED Failure |
+|---------|-----------|--------------|-----------|----------------------|
+| {ID} | `validate_lines` (또는 `src/…`) | {Given→Then} | API·10선·`MAGIC_SUM` SSOT | `pytest` FAILED / `pytest.fail` 미제거 |
+
+### 3) 테스트 플랜
+
+| 항목 | 값 |
+|------|-----|
+| 파일 경로 | `tests/test_validate_lines.py` (또는 `tests/entity/test_{id}.py`) |
+| 함수명 | `test_{id}_{행위}` |
+| conftest 픽스처 | `tests/conftest.py` — `grid_g1`, `golden_grid` (있으면 재사용) |
+| pytest 명령 | `python -m pytest tests/test_validate_lines.py -v` |
+| RED 묶음 범위 | 이번 Test ID **1개** (동시 다중 ID 금지) |
+
+### 4) ECB · Mock 점검
+
+| Track | 점검 |
+|-------|------|
+| **Logic (Track B)** | Domain Mock **금지** (`validate_lines` 실제 호출). `unittest.mock`으로 도메인 대체 금지 |
+| **공통** | E001~E005 **emit 금지** (에러 코드 raise/return·테스트 기대 없음) |
+| **entity** | `boundary`·`control` import 금지 (설계 단계 선언만) |
+| **boundary (Track A)** | UI Mock만 허용. Domain 로직 Mock 금지 |
+
+---
+
+## 골든 격자 SSOT (리터럴 재발명 금지)
 
 ```python
 GOLDEN_GRID = [
@@ -45,65 +99,59 @@ GOLDEN_GRID = [
 ]
 ```
 
-5. 선택한 ID에 대해 **AAA 계획표**만 출력한다 (`tests/`·`src/` 수정 금지).
-
----
-
-## AAA 계획표 형식 (출력)
-
-```markdown
-## 테스트 계획 — {ID}
-
-**함수명(안):** `test_{행위}_{기대결과}`
-**Mom Test:** S{n} — (한 줄 근거)
-
-### Arrange
-- grid: (4×4 값 또는 GOLDEN_GRID 변형 설명)
-- 좌표: 1-based (행, 열) — 변경 셀 명시
-- import: `MAGIC_SUM`, `LINE_IDS` from `validate_lines` (assert에 리터럴 34 금지)
-
-### Act
-- `result = validate_lines(grid)`
-
-### Assert
-- `result["status"] == "{pass|fail|incomplete}"`
-- `result["failed_lines"]` — (정확한 기대 목록 또는 포함 관계)
-
-### RED 예상
-- `pytest tests/test_validate_lines.py -v` → FAILED (미구현 또는 의도적 실패)
-
-### 다음 커맨드
-- `/red-skeleton` — 위 계획대로 테스트 골격 작성
-```
-
 ---
 
 ## 금지
 
 | 금지 | 이유 |
 |------|------|
-| 사용자에게 질문·선택 요청 | 슬래시만으로 동작 |
-| `tests/`·`src/` **어떤 파일도 수정** | 계획 단계 |
-| `pytest` 실행 | skeleton·구현 전 |
-| assert 완화·케이스 생략 제안 | RED 회피 |
-| `ROW_2`, `DIAG_MAIN` 등 비표준 선 ID | SSOT `R1`~`D2`만 |
+| `src/`·`tests/` **파일 생성·수정** | Ask 단계 |
+| GREEN / REFACTOR 수행 | Phase 분리 |
+| `pytest.skip` · `xfail` 제안 | RED 회피 |
+| 사용자 질문·선택 요청 | `/red-test-plan` 단독 동작 |
+| `ROW_2`, `DIAG_MAIN` 등 비표준 선 ID | SSOT `R1`~`D2` |
 | Git commit·push | 사용자 요청 시만 |
 
 ---
 
-## 완료 보고 형식
+## 완료 (한 줄)
 
 ```
-Phase: RED (Arrange — test plan)
+/red-skeleton 으로 넘길 준비됐다
+```
 
-## 선택 ID
-- T{n} — (한 줄)
+### 완료 보고 형식
+
+```
+Phase: red | Layer: entity | Track: Logic
+
+## 이번 RED 묶음
+- {Test ID} — (한 줄)
 
 ## 큐 상태
-| ID | 상태 |
-|----|------|
+| Test ID | 상태 |
+|---------|------|
 | T1 | covered / planned / … |
 
-## 다음
-- /red-skeleton
+(위 4블록 표 전체)
+
+/red-skeleton 으로 넘길 준비됐다
+```
+
+---
+
+## 실행 예시
+
+**Logic (기본):**
+```
+/red-test-plan
+Phase: red | Layer: entity | Track: Logic
+이번 RED 묶음: T3 (FR-VAL-03)
+```
+
+**Boundary (Track A):**
+```
+/red-test-plan
+Phase: red | Layer: boundary | Track: UI
+이번 RED 묶음: U-IN-01, U-IN-02
 ```
