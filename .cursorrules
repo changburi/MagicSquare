@@ -1,0 +1,42 @@
+# MagicSquare — Cursor Rules (세션 3)
+
+## Entity (도메인)
+
+- 격자: 4×4 `int` 배열. `0` = 빈칸, `1~16` = 배치된 값.
+- 마법상수: `34` (행·열·대각선 목표 합).
+- 검사 선(10개): `R1`~`R4`(행), `C1`~`C4`(열), `D1`(주대각), `D2`(역대각).
+- 부분 마방진: 빈칸이 남아 있어도 입력 가능. 완성 여부는 `status`로 구분한다.
+- 선 ID는 위 표기만 사용한다 (`ROW_2`, `DIAG_MAIN` 등 다른 이름 금지).
+
+## Control (검증·TDD)
+
+### API 계약
+
+```python
+validate_lines(grid) -> {"status": str, "failed_lines": list[str]}
+```
+
+| status | 의미 |
+|--------|------|
+| `pass` | 10선 모두 합 34, 빈칸 없음 |
+| `fail` | 한 선 이상 합 ≠ 34 |
+| `incomplete` | 빈칸(0)이 하나라도 있음 |
+
+- `failed_lines`: `fail`일 때만 합 ≠ 34인 선 ID 목록. `pass`·`incomplete`는 `[]`.
+- 구현 파일: `src/validate_lines.py`. 테스트: `tests/test_validate_lines.py`.
+
+### TDD 사이클 (엄격)
+
+1. **RED** — 실패하는 테스트만 추가·수정. **`tests/`만** 변경. `src/` 수정 금지.
+2. **GREEN** — 테스트 통과에 필요한 최소 구현만 `src/`에 작성.
+3. **REFACTOR** — 동작 유지하며 중복·이름 정리. 테스트는 그대로 통과.
+
+**금지:** assert 완화, `pytest.skip`, `xfail`, 테스트 삭제로 RED 회피.
+
+## Boundary (AI·협업)
+
+- 응답 언어: **한국어**.
+- TDD 작업 시 응답 **첫 줄**에 Phase 선언: `Phase: RED` / `GREEN` / `REFACTOR`.
+- 범위 밖(자동 풀이, UI, ECB 전 계층 통합)은 제안하지 않는다.
+- **Git commit·push는 사용자가 요청할 때만** 수행한다.
+- 파일 수정은 요청 범위만. 관련 없는 리팩터·문서 추가 금지.
